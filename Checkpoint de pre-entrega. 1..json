@@ -1,0 +1,283 @@
+{
+  "name": "Checkpoint 1 - Agente de Triaje RRHH y Liquidación",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "6cd34c76-8c92-4832-bbe6-d0491f6e677c",
+      "name": "Chat Trigger",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        272,
+        288
+      ],
+      "webhookId": "checkpoint1-rrhh-chat"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "# ROL\nEres el Asistente de Triaje de Consultas de RRHH y Liquidación de Sueldos de una empresa comercial argentina. Atiendes a empleados y a jefes de área que escriben consultas sobre recibos de sueldo, novedades, licencias, vacaciones, aguinaldo y cargas sociales.\n\n# ÁMBITO\n- Puedes: clasificar la consulta, explicar de forma general conceptos de liquidación (sueldo básico, adicionales, descuentos de ley, SAC, vacaciones) y registrar la consulta como ticket en la planilla de seguimiento.\n- NO puedes: calcular ni modificar liquidaciones reales, confirmar montos exactos de un recibo, aprobar licencias o adelantos, dar asesoramiento legal vinculante, ni acceder a datos de otros empleados.\n\n# OBJETIVO OPERATIVO\nConvertir cada mensaje desestructurado del usuario en un ticket limpio y clasificado para el equipo de Liquidación, con una respuesta inicial clara y breve para quien consulta. Tu meta es que ninguna consulta quede sin registrar ni sin categoría.\n\n# REGLAS DE USO DE HERRAMIENTAS\n1. Usa la herramienta \"registrar_consulta_rrhh\" una única vez por consulta, cuando ya tengas legajo (o nombre), categoría, prioridad y un resumen de la consulta.\n2. Si falta el legajo o el nombre, pídelo antes de registrar. No inventes datos.\n3. No registres saludos, agradecimientos ni preguntas que no sean sobre RRHH o liquidación.\n4. Categorías válidas: RECIBO, VACACIONES, LICENCIA, AGUINALDO, DESCUENTOS, ALTA_BAJA, OTRA.\n5. Prioridad: ALTA si hay un pago afectado o un vencimiento cercano; MEDIA si es una duda con respuesta pendiente; BAJA si es informativa.\n\n# ESCALAMIENTO Y LÍMITES\n- Si el usuario pide un reclamo formal, un cálculo de indemnización, una modificación de recibo o asesoramiento legal, detén tu ciclo y responde: \"Transfiriendo tu caso a revisión humana del equipo de Liquidación.\" Registra igualmente el ticket con prioridad ALTA.\n- Si no sabes algo, dilo con claridad y deriva al equipo; nunca respondas con datos supuestos.\n- Si la consulta es ambigua, haz como máximo una pregunta aclaratoria.\n\n# ESTILO\nEspañol rioplatense, tono cordial y profesional, respuestas de máximo 5 líneas. Usa un lenguaje claro y neutral, refiriéndote al interlocutor como \"usuario\" o por su nombre, sin desdoblamientos ni formas inclusivas.",
+          "maxIterations": 8,
+          "returnIntermediateSteps": true
+        }
+      },
+      "id": "e62efa41-966c-4592-9338-840752cfd73d",
+      "name": "AI Agent - Triaje RRHH",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        592,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "model": "openai/gpt-oss-120b",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "c04a2ec4-d3b7-44bc-bd0d-38460c068c02",
+      "name": "Groq Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        400,
+        560
+      ],
+      "credentials": {
+        "groqApi": {
+          "id": "7NjPIZh4d4FwBrCf",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra una consulta de un empleado o de un jefe de área como ticket nuevo en la planilla de seguimiento de RRHH y Liquidación (Google Sheets). \n\nCUÁNDO USARLA (decídelo de forma autónoma):\n- Cuando el usuario plantea una duda o un pedido concreto sobre recibos de sueldo, vacaciones, licencias, aguinaldo (SAC), descuentos, altas o bajas, y ya tienes legajo o nombre, categoría, prioridad y resumen.\n- Cuando debas escalar el caso a revisión humana (reclamos, indemnizaciones, correcciones de recibo): en ese caso registra con prioridad ALTA.\n- Una sola vez por consulta; no repitas el registro si el usuario agrega detalles menores.\n\nCUÁNDO NO USARLA:\n- Saludos, agradecimientos o charla general.\n- Preguntas ajenas a RRHH o liquidación.\n- Si todavía falta el legajo o el nombre: primero pídelo al usuario.\n\nDATOS A COMPLETAR: legajo_o_nombre, categoria (RECIBO, VACACIONES, LICENCIA, AGUINALDO, DESCUENTOS, ALTA_BAJA u OTRA), prioridad (ALTA, MEDIA o BAJA), resumen (máximo 2 líneas, sin datos sensibles innecesarios) y respuesta_inicial (lo que se le respondió al usuario).",
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "12YTsCfhoQcFStURptGHrcfCQn7Z40x4DxE1ehWT90BM",
+          "mode": "list",
+          "cachedResultName": "Consultas RRHH",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12YTsCfhoQcFStURptGHrcfCQn7Z40x4DxE1ehWT90BM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Consulta",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/12YTsCfhoQcFStURptGHrcfCQn7Z40x4DxE1ehWT90BM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Fecha": "={{ $now.toFormat('dd/MM/yyyy HH:mm') }}",
+            "Legajo_o_Nombre": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Legajo_o_Nombre', ``, 'string') }}",
+            "Categoria": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Categoria', ``, 'string') }}",
+            "Prioridad": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prioridad', ``, 'string') }}",
+            "Resumen": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Resumen', ``, 'string') }}",
+            "Respuesta_inicial": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Respuesta_inicial', ``, 'string') }}",
+            "Estado": "Pendiente"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Fecha",
+              "displayName": "Fecha",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Legajo_o_Nombre",
+              "displayName": "Legajo_o_Nombre",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Categoria",
+              "displayName": "Categoria",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Prioridad",
+              "displayName": "Prioridad",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Resumen",
+              "displayName": "Resumen",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Respuesta_inicial",
+              "displayName": "Respuesta_inicial",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Estado",
+              "displayName": "Estado",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d3a9c76c-c095-4d59-a257-92f81ff4655a",
+      "name": "registrar_consulta_rrhh",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.5,
+      "position": [
+        720,
+        560
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SNJgG4pPSv0mkJin",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "fiorellaeda27@gmail.com",
+        "subject": "=Tarea completada - Agente RRHH - {{ $now.toFormat('dd/MM/yyyy HH:mm') }}",
+        "message": "=<h3>Tarea completada</h3>\n<p><b>Consulta del usuario:</b><br>{{ $('Chat Trigger').item.json.chatInput }}</p>\n<p><b>Respuesta final del agente:</b><br>{{ $json.output }}</p>\n<p><b>Pasos intermedios (Execution Log / herramientas usadas):</b></p>\n<pre>{{ JSON.stringify($json.intermediateSteps, null, 2) }}</pre>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "a788aee1-5a48-4e2d-a818-3bab763f5470",
+      "name": "Gmail - Log Tarea completada",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        288
+      ],
+      "webhookId": "checkpoint1-gmail-log",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "820et1uAoJQOWsC1",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "27124ea0-0087-43b7-993c-b1c42ac4e7cb",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        576,
+        592
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Chat Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Triaje RRHH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Triaje RRHH": {
+      "main": [
+        [
+          {
+            "node": "Gmail - Log Tarea completada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "registrar_consulta_rrhh": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Triaje RRHH",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Triaje RRHH",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - Triaje RRHH",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "eb121faf-528c-412f-b6cb-7e5a29db86ea",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0e769d5546fa049cfd3512cad1a8444bbbda313e599e495d66bea429b41652d6"
+  },
+  "nodeGroups": [],
+  "id": "A236TYSda6OollFw",
+  "tags": []
+}
